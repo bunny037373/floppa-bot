@@ -55,7 +55,7 @@ client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
   client.user.setPresence({
     status: "online",
-    activities: [{ name: "Big Floppa Gallery", type: ActivityType.Watching }]
+    activities: [{ name: " ", type: ActivityType.Watching }]
   });
 });
 
@@ -72,10 +72,9 @@ client.on("messageCreate", async (message) => {
     const randomUrl = FLOPPA_IMAGES[Math.floor(Math.random() * FLOPPA_IMAGES.length)];
     
     const embed = new EmbedBuilder()
-      .setColor("#D2B48C")
-      .setTitle("📸 Floppa Spotted!")
+    
       .setImage(randomUrl)
-      .setFooter({ text: "Source: Private Floppa Collection" });
+     
 
     await message.channel.send({ embeds: [embed] });
     
