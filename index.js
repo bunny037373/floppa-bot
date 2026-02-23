@@ -1,12 +1,21 @@
 require("dotenv").config();
 const express = require("express");
-const { Client, GatewayIntentBits, ActivityType, EmbedBuilder } = require("discord.js");
+const { 
+    Client, 
+    GatewayIntentBits, 
+    ActivityType, 
+    EmbedBuilder, 
+    Partials, 
+    REST, 
+    Routes, 
+    SlashCommandBuilder 
+} = require("discord.js");
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 const TOKEN = process.env.DISCORD_TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID; // Must add this to Render Env
 
-// --- YOUR CUSTOM FLOPPA GALLERY ---
 const FLOPPA_IMAGES = [
   "https://media.discordapp.net/attachments/1219622260718047333/1475237750390390915/00.png",
   "https://media.discordapp.net/attachments/1219622260718047333/1475237750797111358/R.png",
@@ -33,53 +42,70 @@ const FLOPPA_IMAGES = [
   "https://media.discordapp.net/attachments/1219622260718047333/1475240459818369205/floppa4.jpg",
   "https://media.discordapp.net/attachments/1219622260718047333/1475240460372152372/floppa6.webp",
   "https://media.discordapp.net/attachments/1219622260718047333/1475240460791447602/floppa7.jpg",
-  "https://media.discordapp.net/attachments/1219622260718047333/1475240461152293034/floppa8.jpg",
-  "https://wallpapers.com/images/hd/caracal-cat-restingon-perch-k3s3jtnv4i060jky.jpg"
+  "https://media.discordapp.net/attachments/1219622260718047333/1475240461152293034/floppa8.jpg"
 ];
 
-// --- WEB SERVER ---
-app.get("/", (req, res) => res.send("✅ Floppa Bot with Gallery is live!"));
-app.listen(PORT, '0.0.0.0', () => console.log(`🌐 Web server running on port ${PORT}`));
+// Server for Render
+app.get("/", (req, res) => res.send("✅ Floppa is ready for Global User Install!"));
+app.listen(PORT, '0.0.0.0', () => console.log(`🌐 Port ${PORT}`));
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
-  ]
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.DirectMessages
+  ],
+  partials: [Partials.Channel]
 });
 
-let cooldown = false;
+// --- Register Slash Command ---
+const commands = [
+  new SlashCommandBuilder()
+    .setName('floppa')
+    .setDescription('Summon a random Floppa anywhere!')
+    .setIntegrationTypes([0, 1]) // 0 = Guild, 1 = User Install
+    .setContexts([0, 1, 2])       // 0 = Guild, 1 = Bot DM, 2 = Private Channel/Group
+].map(c => c.toJSON());
 
-client.once("ready", () => {
-  console.log(`✅ Logged in as ${client.user.tag}`);
-  client.user.setPresence({
-    status: "online",
-    activities: [{ name: " ", type: ActivityType.Watching }]
-  });
-});
+const rest = new REST({ version: '10' }).setToken(TOKEN);
 
-client.on("messageCreate", async (message) => {
-  if (message.author.bot) return;
-  
-  const content = message.content.toLowerCase();
+(async () => {
+  try {
+    console.log('Pushing slash commands...');
+    await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
+    console.log('Commands registered globally.');
+  } catch (e) { console.error(e); }
+})();
 
-  if (content === "!floppa" || content.includes("bruh") || content.includes("buh")) {
-    if (cooldown) return;
-    cooldown = true;
-    
-    // Pick a random image from YOUR specific list
-    const randomUrl = FLOPPA_IMAGES[Math.floor(Math.random() * FLOPPA_IMAGES.length)];
-    
-    const embed = new EmbedBuilder()
-    
-      .setImage(randomUrl)
-     
+// --- Floppa Logic ---
+function createFloppaEmbed() {
+  const url = FLOPPA_IMAGES[Math.floor(Math.random() * FLOPPA_IMAGES.length)];
+  return new EmbedBuilder()
+    .setColor("#D2B48C")
+    .setTitle("📸 Floppa Spotted!")
+    .setImage(url);
+}
 
-    await message.channel.send({ embeds: [embed] });
-    
-    setTimeout(() => (cooldown = false), 3000);
+// Handle Slash Commands (Required for User Install)
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
+  if (interaction.commandName === 'floppa') {
+    await interaction.reply({ embeds: [createFloppaEmbed()] });
   }
 });
 
-client.login(TOKEN).catch(err => console.error("❌ LOGIN FAILED:", err.message));
+// Keep the old !floppa logic for servers where the bot is added
+client.on("messageCreate", async (message) => {
+  if (message.author.bot) return;
+  const content = message.content.toLowerCase();
+  if (content === "!floppa" || content.includes("bruh") || content.includes("buh")) {
+    await message.channel.send({ embeds: [createFloppaEmbed()] });
+  }
+});
+
+client.once("ready", () => {
+  console.log(`✅ ${client.user.tag} is online`);
+});
+
+client.login(TOKEN);
