@@ -1,9 +1,11 @@
 {
   "name": "floppa-bot",
   "version": "1.0.0",
+  "description": "Global Floppa Discord Bot",
   "main": "index.js",
+  "type": "commonjs",
   "engines": {
-    "node": ">=16.9.0"
+    "node": ">=18.17.0"
   },
   "scripts": {
     "start": "node index.js"
