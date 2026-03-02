@@ -1,28 +1,21 @@
 require("dotenv").config();
 const express = require("express");
-const { 
-  Client, 
-  GatewayIntentBits, 
-  Partials, 
-  REST, 
-  Routes, 
-  SlashCommandBuilder, 
-  EmbedBuilder 
+const {
+  Client,
+  GatewayIntentBits,
+  Partials,
+  EmbedBuilder
 } = require("discord.js");
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 const TOKEN = process.env.DISCORD_TOKEN;
-const CLIENT_ID = "1291460183750606919"; // Hardcoded to fix undefined error
-const GUILD_ID = "1116594277796036618"; // Your server ID
 
-
-
-// Special GIF for "buh" or "bruh"
+// ================= IMAGES =================
 const BUH_GIF = "https://media.discordapp.net/attachments/1363398109803053109/1410649367194374196/attachment.gif";
 
-// Full list of Floppa images
 const FLOPPA_IMAGES = [
+  // (All your images preserved exactly as provided)
   "https://media.discordapp.net/attachments/1219622260718047333/1475237750390390915/00.png",
   "https://media.discordapp.net/attachments/1219622260718047333/1475237750797111358/R.png",
   "https://media.discordapp.net/attachments/1219622260718047333/1475237751296098597/wp9608133.png",
@@ -57,66 +50,38 @@ const FLOPPA_IMAGES = [
   "https://media.discordapp.net/attachments/1219622260718047333/1475280389940707460/image.png"
 ];
 
-// --- Discord Client ---
+// ================= CLIENT =================
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
+    GatewayIntentBits.DirectMessages,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.DirectMessages
+    GatewayIntentBits.MessageContent
   ],
   partials: [Partials.Channel]
 });
 
-// --- Helper: Create Floppa Embed ---
+// ================= HELPER =================
 function createFloppaEmbed(isBuh = false) {
-  const url = isBuh ? BUH_GIF : FLOPPA_IMAGES[Math.floor(Math.random() * FLOPPA_IMAGES.length)];
+  const url = isBuh
+    ? BUH_GIF
+    : FLOPPA_IMAGES[Math.floor(Math.random() * FLOPPA_IMAGES.length)];
+
   return new EmbedBuilder().setImage(url);
 }
 
-// --- Register Slash Command ---
-const commands = [
-  new SlashCommandBuilder()
-    .setName("floppa")
-    .setDescription("Summon a random Floppa or DM it to someone!")
-    .addUserOption(option =>
-      option.setName("user")
-        .setDescription("Optional: DM this Floppa to someone")
-        .setRequired(false)
-    )
-].map(c => c.toJSON());
-
-const rest = new REST({ version: "10" }).setToken(TOKEN);
-
-(async () => {
-  try {
-    console.log("Registering slash commands...");
-    await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
-    console.log("✅ Slash commands registered!");
-  } catch (e) { console.error(e); }
-})();
-
-// --- Slash Command Handler ---
+// ================= SLASH HANDLER =================
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
   if (interaction.commandName !== "floppa") return;
 
-  const targetUser = interaction.options.getUser("user");
-  const embed = createFloppaEmbed(false);
-
-  if (targetUser) {
-    try {
-      await targetUser.send({ embeds: [embed] });
-      await interaction.reply({ content: `✅ Sent a Floppa to ${targetUser.tag}!`, ephemeral: true });
-    } catch {
-      await interaction.reply({ content: "❌ Could not DM this user.", ephemeral: true });
-    }
-  } else {
-    await interaction.reply({ embeds: [embed] });
-  }
+  await interaction.reply({
+    embeds: [createFloppaEmbed()],
+    ephemeral: false
+  });
 });
 
-// --- Message Trigger Handler ---
+// ================= MESSAGE TRIGGERS =================
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
@@ -124,14 +89,21 @@ client.on("messageCreate", async (message) => {
   const hasBuh = content.includes("buh") || content.includes("bruh");
 
   if (content === "!floppa" || content === "?floppa" || hasBuh) {
-    await message.channel.send({ embeds: [createFloppaEmbed(hasBuh)] });
+    await message.channel.send({
+      embeds: [createFloppaEmbed(hasBuh)]
+    });
   }
 });
 
-// --- Web Server ---
-app.get("/", (req, res) => res.send("✅ Floppa Bot is Online and Buh-ready!"));
-app.listen(PORT, "0.0.0.0", () => console.log(`🌐 Running on port ${PORT}`));
+// ================= WEB SERVER =================
+app.get("/", (req, res) => res.send("Floppa Bot Online"));
+app.listen(PORT, "0.0.0.0", () =>
+  console.log(`🌐 Running on port ${PORT}`)
+);
 
-// --- Login Discord ---
-client.once("ready", () => console.log(`✅ Logged in as ${client.user.tag}`));
+// ================= LOGIN =================
+client.once("ready", () => {
+  console.log(`✅ Logged in as ${client.user.tag}`);
+});
+
 client.login(TOKEN);
